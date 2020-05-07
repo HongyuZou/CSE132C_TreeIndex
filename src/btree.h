@@ -429,7 +429,9 @@ class BTreeIndex {
 
   void insertNode();
 
-  void insertRecursive(PageId root, const void *key, const RecordId rid);
+  const void insertRecursive(PageId root, const void *key, const RecordId rid);
+
+  const PageId findPageNoInNonLeaf(Page* node, const void* key);
 
   /**
 	 * Insert a new entry using the pair <value,rid>. 

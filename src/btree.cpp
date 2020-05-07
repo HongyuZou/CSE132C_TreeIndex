@@ -16,6 +16,7 @@
 #include "exceptions/index_scan_completed_exception.h"
 #include "exceptions/file_not_found_exception.h"
 #include "exceptions/end_of_file_exception.h"
+#include <string>
 
 
 //#define DEBUG
@@ -119,12 +120,89 @@ BTreeIndex::~BTreeIndex()
 {
 }
 
+const PageId BTreeIndex::findPageNoInNonLeaf(Page* node, const void* key) {
+	if(this->attributeType == INTEGER) {
+		struct NonLeafNodeInt* temp = reinterpret_cast <struct NonLeafNodeInt*>(node);
+
+		int i;
+		for(i = 0; i < INTARRAYNONLEAFSIZE; i ++) {
+			if(*(int*)key < temp->keyArray[i]) {
+				return temp->pageNoArray[i];
+			}
+
+			if(*(int*)key == temp->keyArray[i]) {
+				return temp->pageNoArray[i + 1];
+			}
+		}
+
+		return temp->pageNoArray[i + 1];
+		
+	} else if(this->attributeType == DOUBLE) {
+		struct NonLeafNodeDouble* temp = reinterpret_cast <struct NonLeafNodeDouble*>(node);
+
+		int i;
+		for(i = 0; i < DOUBLEARRAYNONLEAFSIZE; i ++) {
+			if(*(double*)key < temp->keyArray[i]) {
+				return temp->pageNoArray[i];
+			}
+
+			if(*(double*)key == temp->keyArray[i]) {
+				return temp->pageNoArray[i + 1];
+			}
+		}
+
+		return temp->pageNoArray[i + 1];
+	} else {
+		struct NonLeafNodeString* temp = reinterpret_cast <struct NonLeafNodeString*>(node);
+		std::string strKey((char*)key);
+
+		int i;
+		for(i = 0; i < STRINGARRAYNONLEAFSIZE; i ++) {
+			std::string nodeKey(temp->keyArray[i]);
+			if(strKey < nodeKey) {
+				return temp->pageNoArray[i];
+			}
+
+			if(strKey == nodeKey) {
+				return temp->pageNoArray[i + 1];
+			}
+		}
+
+		return temp->pageNoArray[i + 1];
+	}
+}
 
 // -----------------------------------------------------------------------------
 // BTreeIndex::insertRecursive
 // -----------------------------------------------------------------------------
-void insertRecursive(PageId root, const void *key, const RecordId rid) {
+const void BTreeIndex::insertRecursive(PageId root, const void *key, const RecordId rid) {
+	// check if current node is leaf or not
+	Page* node;
+	this->bufMgr->readPage(this->file, root, node);
 
+	if(this->attributeType == INTEGER) {
+		if(true/* is a leaf*/) {
+			PageId nextNodeId = findPageNoInNonLeaf(node, key);
+			insertRecursive(nextNodeId, key, rid);
+		} else {
+			// not a leaf
+		}
+	} else if(this->attributeType == DOUBLE) {
+		if(true/* is a leaf*/) {
+			PageId nextNodeId = findPageNoInNonLeaf(node, key);
+			insertRecursive(nextNodeId, key, rid);
+		} else {
+			// not a leaf
+		}
+	} else {
+		if(true/* is a leaf*/) {
+			PageId nextNodeId = findPageNoInNonLeaf(node, key);
+			insertRecursive(nextNodeId, key, rid);
+		} else {
+			// not a leaf 
+		}
+	}
+	
 }
 
 // -----------------------------------------------------------------------------
