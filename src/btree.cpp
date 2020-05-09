@@ -45,7 +45,35 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 	this->attributeType = attrType;
 	this->attrByteOffset = attrByteOffset;
 	this->bufMgr = bufMgrIn;
-	this->rootPageNum = -1;
+
+	// init root node
+	PageId rootPageId;
+	Page* rootPage;
+	bufMgr->allocPage(this->file, rootPageId, rootPage);
+	this->rootPageNum = rootPageId;
+
+	if(this->attributeType == INTEGER) {
+		this->leafOccupancy = INTARRAYLEAFSIZE;
+		this->nodeOccupancy = INTARRAYNONLEAFSIZE;
+		struct NonLeafNodeInt root = {.level = 1};
+		struct NonLeafNodeInt* temp = (NonLeafNodeInt*)rootPage;
+		*temp = root;
+		this->bufMgr->unPinPage(this->file, rootPageId, true);
+	} else if(this->attributeType == DOUBLE) { 
+		this->leafOccupancy = DOUBLEARRAYLEAFSIZE;
+		this->nodeOccupancy = DOUBLEARRAYNONLEAFSIZE;
+		struct NonLeafNodeDouble root = {.level = 1};
+		struct NonLeafNodeDouble* temp = (NonLeafNodeDouble*)rootPage;
+		*temp = root;
+		this->bufMgr->unPinPage(this->file, rootPageId, true);
+	} else {
+		this->leafOccupancy = STRINGARRAYLEAFSIZE;
+		this->nodeOccupancy = STRINGARRAYNONLEAFSIZE;
+		struct NonLeafNodeString root = {.level = 1};
+		struct NonLeafNodeString* temp = (NonLeafNodeString*)rootPage;
+		*temp = root;
+		this->bufMgr->unPinPage(this->file, rootPageId, true);
+	}
 
 	// build index meta info
 	const char* tempName = relationName.c_str();
@@ -56,7 +84,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 	PageId metaPageId;
 	Page* headerPage;
 	bufMgr->allocPage(newFile, metaPageId, headerPage);
-	struct IndexMetaInfo* temp = reinterpret_cast <struct IndexMetaInfo*>(headerPage);
+	struct IndexMetaInfo* temp = (IndexMetaInfo*)headerPage;
 	*temp = metaInfo;
 	this->headerPageNum = metaPageId;
 	this->bufMgr->unPinPage(newFile, metaPageId, true);
@@ -122,7 +150,7 @@ BTreeIndex::~BTreeIndex()
 
 const PageId BTreeIndex::findPageNoInNonLeaf(Page* node, const void* key) {
 	if(this->attributeType == INTEGER) {
-		struct NonLeafNodeInt* temp = reinterpret_cast <struct NonLeafNodeInt*>(node);
+		struct NonLeafNodeInt* temp = (NonLeafNodeInt*)(node);
 
 		int i;
 		for(i = 0; i < INTARRAYNONLEAFSIZE; i ++) {
@@ -138,7 +166,7 @@ const PageId BTreeIndex::findPageNoInNonLeaf(Page* node, const void* key) {
 		return temp->pageNoArray[i + 1];
 		
 	} else if(this->attributeType == DOUBLE) {
-		struct NonLeafNodeDouble* temp = reinterpret_cast <struct NonLeafNodeDouble*>(node);
+		struct NonLeafNodeDouble* temp = (NonLeafNodeDouble*)(node);
 
 		int i;
 		for(i = 0; i < DOUBLEARRAYNONLEAFSIZE; i ++) {
@@ -153,7 +181,7 @@ const PageId BTreeIndex::findPageNoInNonLeaf(Page* node, const void* key) {
 
 		return temp->pageNoArray[i + 1];
 	} else {
-		struct NonLeafNodeString* temp = reinterpret_cast <struct NonLeafNodeString*>(node);
+		struct NonLeafNodeString* temp = (NonLeafNodeString*)(node);
 		std::string strKey((char*)key);
 
 		int i;
@@ -172,37 +200,179 @@ const PageId BTreeIndex::findPageNoInNonLeaf(Page* node, const void* key) {
 	}
 }
 
+void insertStringKeyToLeaf(LeafNodeString* leaf, const void* key, const RecordId rid) {
+	// find place to insert
+	for(int i = 0; i < leaf->keyArrLength; i ++) {
+		if(std::string(leaf->keyArray[i]) > std::string((char*)key)) {
+			char temp[11] = {'\0'};
+			strcpy(temp, leaf->keyArray[i]);
+			strcpy(leaf->keyArray[i], (char*)key);
+
+			// shift key to right
+			for(int j = i + 1; j < leaf->keyArrLength; j ++) {
+				char curr[11] = {'\0'};
+				strcpy(curr, leaf->keyArray[j]);
+				strcpy(leaf->keyArray[j], temp);
+				strcpy(temp, curr);
+			}
+			strcpy(leaf->keyArray[leaf->keyArrLength], temp);
+			
+			// insert rid and shift to right
+			RecordId temp_rid = leaf->ridArray[i];
+			leaf->ridArray[i] = rid;
+			for(int j = i + 1; j < leaf->keyArrLength; j ++) {
+				RecordId curr = leaf->ridArray[j];
+				leaf->ridArray[j] = temp_rid;
+				temp_rid = curr;
+			}
+			leaf->ridArray[leaf->keyArrLength] = temp_rid;
+
+			leaf->keyArrLength ++;
+			return;
+		}
+	}
+
+	// insert at last place
+	strcpy(leaf->keyArray[leaf->keyArrLength], (char*)key);
+	leaf->ridArray[leaf->keyArrLength] = rid;
+	leaf->keyArrLength ++;
+}
+
+void insertDoubleKeyToLeaf(LeafNodeDouble* leaf, const void* key, const RecordId rid) {
+	// find place to insert
+	for(int i = 0; i < leaf->keyArrLength; i ++) {
+		if(leaf->keyArray[i] > *(double*)key) {
+			double temp = leaf->keyArray[i];
+			leaf->keyArray[i] = *(double*)key;
+
+			// shift key to right
+			for(int j = i + 1; j < leaf->keyArrLength; j ++) {
+				double curr = leaf->keyArray[j];
+				leaf->keyArray[j] = temp;
+				temp = curr;
+			}
+			leaf->keyArray[leaf->keyArrLength] = temp;
+			
+			// insert rid and shift to right
+			RecordId temp_rid = leaf->ridArray[i];
+			leaf->ridArray[i] = rid;
+			for(int j = i + 1; j < leaf->keyArrLength; j ++) {
+				RecordId curr = leaf->ridArray[j];
+				leaf->ridArray[j] = temp_rid;
+				temp_rid = curr;
+			}
+			leaf->ridArray[leaf->keyArrLength] = temp_rid;
+
+			leaf->keyArrLength ++;
+			return;
+		}
+	}
+
+	// insert at last place
+	leaf->keyArray[leaf->keyArrLength] = *(double*)key;
+	leaf->ridArray[leaf->keyArrLength] = rid;
+	leaf->keyArrLength ++;
+}
+
+void insertIntKeyToLeaf(LeafNodeInt* leaf, const void* key, const RecordId rid) {
+	// find place to insert
+	for(int i = 0; i < leaf->keyArrLength; i ++) {
+		if(leaf->keyArray[i] > *(int*)key) {
+			int temp = leaf->keyArray[i];
+			leaf->keyArray[i] = *(int*)key;
+
+			// shift key to right
+			for(int j = i + 1; j < leaf->keyArrLength; j ++) {
+				int curr = leaf->keyArray[j];
+				leaf->keyArray[j] = temp;
+				temp = curr;
+			}
+			leaf->keyArray[leaf->keyArrLength] = temp;
+			
+			// insert rid and shift to right
+			RecordId temp_rid = leaf->ridArray[i];
+			leaf->ridArray[i] = rid;
+			for(int j = i + 1; j < leaf->keyArrLength; j ++) {
+				RecordId curr = leaf->ridArray[j];
+				leaf->ridArray[j] = temp_rid;
+				temp_rid = curr;
+			}
+			leaf->ridArray[leaf->keyArrLength] = temp_rid;
+
+			leaf->keyArrLength ++;
+			return;
+		}
+	}
+
+	// insert at last place
+	leaf->keyArray[leaf->keyArrLength] = *(int*)key;
+	leaf->ridArray[leaf->keyArrLength] = rid;
+	leaf->keyArrLength ++;
+}
+
 // -----------------------------------------------------------------------------
 // BTreeIndex::insertRecursive
 // -----------------------------------------------------------------------------
-const void BTreeIndex::insertRecursive(PageId root, const void *key, const RecordId rid) {
+const void BTreeIndex::insertRecursive(PageId root, const void *key, const RecordId rid, int lastLevel) {
 	// check if current node is leaf or not
 	Page* node;
 	this->bufMgr->readPage(this->file, root, node);
 
 	if(this->attributeType == INTEGER) {
-		if(true/* is a leaf*/) {
-			PageId nextNodeId = findPageNoInNonLeaf(node, key);
-			insertRecursive(nextNodeId, key, rid);
+		if(lastLevel == 1) {
+			// is a leaf
+			struct LeafNodeInt* currNode = (LeafNodeInt*)node;
+			
+			// check whether to split
+			if(currNode->keyArrLength < this->leafOccupancy) {
+				insertIntKeyToLeaf(currNode, key, rid);
+			} else {
+				// split
+			
+			}
 		} else {
 			// not a leaf
+			PageId nextNodeId = findPageNoInNonLeaf(node, key);
+			struct NonLeafNodeInt* currNode = (NonLeafNodeInt*)node;
+			insertRecursive(nextNodeId, key, rid, currNode->level);
 		}
 	} else if(this->attributeType == DOUBLE) {
-		if(true/* is a leaf*/) {
-			PageId nextNodeId = findPageNoInNonLeaf(node, key);
-			insertRecursive(nextNodeId, key, rid);
+		if(lastLevel == 1) {
+			// is a leaf
+			struct LeafNodeDouble* currNode = (LeafNodeDouble*)node;
+			
+			// check whether to split
+			if(currNode->keyArrLength < this->leafOccupancy) {
+				insertDoubleKeyToLeaf(currNode, key, rid);
+			} else {
+				// split
+			
+			}
 		} else {
 			// not a leaf
+			PageId nextNodeId = findPageNoInNonLeaf(node, key);
+			struct NonLeafNodeInt* currNode = (NonLeafNodeInt*)node;
+			insertRecursive(nextNodeId, key, rid, currNode->level);
 		}
 	} else {
-		if(true/* is a leaf*/) {
-			PageId nextNodeId = findPageNoInNonLeaf(node, key);
-			insertRecursive(nextNodeId, key, rid);
+		if(lastLevel == 1) {
+			// is a leaf
+			struct LeafNodeString* currNode = (LeafNodeString*)node;
+			
+			// check whether to split
+			if(currNode->keyArrLength < this->leafOccupancy) {
+				insertStringKeyToLeaf(currNode, key, rid);
+			} else {
+				// split
+			
+			}
 		} else {
-			// not a leaf 
+			// not a leaf
+			PageId nextNodeId = findPageNoInNonLeaf(node, key);
+			struct NonLeafNodeString* currNode = (NonLeafNodeString*)node;
+			insertRecursive(nextNodeId, key, rid, currNode->level);
 		}
 	}
-	
 }
 
 // -----------------------------------------------------------------------------
@@ -210,42 +380,47 @@ const void BTreeIndex::insertRecursive(PageId root, const void *key, const Recor
 // -----------------------------------------------------------------------------
 
 const void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
-	// if no root node, insert root node
-	if(this->rootPageNum == -1) {
-		PageId rootPageId;
-		Page* rootPage;
-		bufMgr->allocPage(this->file, rootPageId, rootPage);
-		this->rootPageNum = rootPageId;
+	Page* rootPage;
+	this->bufMgr->readPage(this->file, this->rootPageNum, rootPage);
 
-		// create root node
-		if(this->attributeType == INTEGER) {
-			struct LeafNodeInt rootNode = {.rightSibPageNo = -1};
-			rootNode.keyArray[0] = *((int*)key);
-			rootNode.ridArray[0] = rid;
-			struct LeafNodeInt* temp = reinterpret_cast <struct LeafNodeInt*>(rootPage);
-			*temp = rootNode;
-			this->bufMgr->unPinPage(this->file, rootPageId, true);
+	if(this->attributeType == INTEGER) {
+		struct NonLeafNodeInt* rootNode = (NonLeafNodeInt*) rootPage;
+		if(rootNode->keyArrLength == 0) {
+			rootNode->keyArray[0] = *((int*)key);
 			
-		} else if(this->attributeType == DOUBLE) {
-			struct LeafNodeDouble rootNode = {.rightSibPageNo = -1};
-			rootNode.keyArray[0] = *((double*)key);
-			rootNode.ridArray[0] = rid;
-			struct LeafNodeDouble* temp = reinterpret_cast <struct LeafNodeDouble*>(rootPage);
-			*temp = rootNode;
-			this->bufMgr->unPinPage(this->file, rootPageId, true);
+			// allocate leaf
+			Page* leafPage;
+			PageId leafPageId;
+			this->bufMgr->allocPage(this->file, leafPageId, leafPage);
+			struct LeafNodeInt* leafNode = (LeafNodeInt*)leafPage;
+		}
+	} else if(this->attributeType == DOUBLE) {
+		struct NonLeafNodeDouble* rootNode = (NonLeafNodeDouble*) rootPage;
+		if(rootNode->keyArrLength == 0) {
+			rootNode->keyArray[0] = *((double*)key);
+			
+			// allocate leaf
+			Page* leafPage;
+			PageId leafPageId;
+			this->bufMgr->allocPage(this->file, leafPageId, leafPage);
+			struct LeafNodeDouble* leafNode = (LeafNodeDouble*)leafPage;
+		}
 
-		} else {
-			struct LeafNodeString rootNode = {.rightSibPageNo = -1};
-			strcpy(rootNode.keyArray[0], (char*)key);
-			rootNode.ridArray[0] = rid;
-			struct LeafNodeString* temp = reinterpret_cast <struct LeafNodeString*>(rootPage);
-			*temp = rootNode;
-			this->bufMgr->unPinPage(this->file, rootPageId, true);
+	} else {
+		struct NonLeafNodeString* rootNode = (NonLeafNodeString*) rootPage;
+		if(rootNode->keyArrLength == 0) {
+			strcpy(rootNode->keyArray[0], (char*)key);
+			
+			// allocate leaf
+			Page* leafPage;
+			PageId leafPageId;
+			this->bufMgr->allocPage(this->file, leafPageId, leafPage);
+			struct LeafNodeString* leafNode = (LeafNodeString*)leafPage;
 		}
 	}
 
 	// recursively insert
-	insertRecursive(this->rootPageNum, key, rid);
+	insertRecursive(this->rootPageNum, key, rid, 0);
 }
 
 // -----------------------------------------------------------------------------

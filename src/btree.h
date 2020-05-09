@@ -180,6 +180,10 @@ struct NonLeafNodeInt{
    */
 	int keyArray[ INTARRAYNONLEAFSIZE ];
 
+  int keyArrLength;
+
+  int pageArrLength;
+
   /**
    * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
    */
@@ -199,6 +203,10 @@ struct NonLeafNodeDouble{
    * Stores keys.
    */
 	double keyArray[ DOUBLEARRAYNONLEAFSIZE ];
+
+  int keyArrLength;
+
+  int pageArrLength;
 
   /**
    * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
@@ -220,6 +228,10 @@ struct NonLeafNodeString{
    */
 	char keyArray[ STRINGARRAYNONLEAFSIZE ][ STRINGSIZE ];
 
+  int keyArrLength;
+
+  int pageArrLength;
+
   /**
    * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
    */
@@ -239,6 +251,8 @@ struct LeafNodeInt{
    * Stores RecordIds.
    */
 	RecordId ridArray[ INTARRAYLEAFSIZE ];
+
+  int keyArrLength;
 
   /**
    * Page number of the leaf on the right side.
@@ -261,6 +275,8 @@ struct LeafNodeDouble{
    */
 	RecordId ridArray[ DOUBLEARRAYLEAFSIZE ];
 
+  int keyArrLength;
+
   /**
    * Page number of the leaf on the right side.
 	 * This linking of leaves allows to easily move from one leaf to the next leaf during index scan.
@@ -281,6 +297,8 @@ struct LeafNodeString{
    * Stores RecordIds.
    */
 	RecordId ridArray[ STRINGARRAYLEAFSIZE ];
+
+  int keyArrLength;
 
   /**
    * Page number of the leaf on the right side.
@@ -429,7 +447,7 @@ class BTreeIndex {
 
   void insertNode();
 
-  const void insertRecursive(PageId root, const void *key, const RecordId rid);
+  const void insertRecursive(PageId root, const void *key, const RecordId rid, int lastLevel);
 
   const PageId findPageNoInNonLeaf(Page* node, const void* key);
 
