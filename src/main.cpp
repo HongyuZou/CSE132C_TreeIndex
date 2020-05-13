@@ -41,6 +41,7 @@ using namespace badgerdb;
 // -----------------------------------------------------------------------------
 int testNum = 1;
 const std::string relationName = "relA";
+const std::string relationNameB = "relB";
 //If the relation size is changed then the second parameter 2 chechPassFail may need to be changed to number of record that are expected to be found during the scan, else tests will erroneously be reported to have failed.
 const int	relationSize = 5000;
 std::string intIndexName, doubleIndexName, stringIndexName;
@@ -54,6 +55,7 @@ typedef struct tuple {
 } RECORD;
 
 PageFile* file1;
+PageFile* file2;
 RecordId rid;
 RECORD record1;
 std::string dbRecord1;
@@ -67,6 +69,7 @@ BufMgr * bufMgr = new BufMgr(100);
 void createRelationForward();
 void createRelationBackward();
 void createRelationRandom();
+void createSmallRelation();
 void intTests();
 int intScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Operator highOp);
 void indexTests();
@@ -77,6 +80,7 @@ int stringScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Opera
 void test1();
 void test2();
 void test3();
+void test4();
 void errorTests();
 void deleteRelation();
 
@@ -162,10 +166,13 @@ int main(int argc, char **argv)
 	// filescan goes out of scope here, so relation file gets closed.
 
 	File::remove(relationName);
+	File::remove(relationNameB);
+	std::cout << "hehe" << std::endl;
 
-	test1();
-	test2();
-	test3();
+	test4();
+	// test1();
+	// test2();
+	// test3();
 	//errorTests();
 
   return 1;
@@ -202,6 +209,56 @@ void test3()
 	createRelationRandom();
 	indexTests();
 	deleteRelation();
+}
+
+void test4() {
+	createSmallRelation();
+	BTreeIndex index(relationNameB, intIndexName, bufMgr, offsetof(tuple,i), INTEGER);
+}
+
+void createSmallRelation()
+{
+	std::vector<RecordId> ridVec;
+  // destroy any old copies of relation file
+	try
+	{
+		File::remove(relationNameB);
+	}
+	catch(FileNotFoundException e)
+	{
+	}
+
+  file2 = new PageFile(relationNameB, true);
+
+  // initialize all of record1.s to keep purify happy
+  memset(record1.s, ' ', sizeof(record1.s));
+	PageId new_page_number;
+  Page new_page = file2->allocatePage(new_page_number);
+
+  // Insert a bunch of tuples into the relation.
+  for(int i = 0; i < 5; i++ )
+	{
+    sprintf(record1.s, "%05d string record", i);
+    record1.i = i;
+    record1.d = (double)i;
+    std::string new_data(reinterpret_cast<char*>(&record1), sizeof(record1));
+
+		while(1)
+		{
+			try
+			{
+    		new_page.insertRecord(new_data);
+				break;
+			}
+			catch(InsufficientSpaceException e)
+			{
+				file2->writePage(new_page_number, new_page);
+  			    new_page = file2->allocatePage(new_page_number);
+			}
+		}
+  }
+
+	file2->writePage(new_page_number, new_page);
 }
 
 // -----------------------------------------------------------------------------

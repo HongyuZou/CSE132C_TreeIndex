@@ -77,7 +77,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 
 	// build index meta info
 	const char* tempName = relationName.c_str();
-	struct IndexMetaInfo metaInfo = {.attrByteOffset = attrByteOffset, .attrType = attrType, .rootPageNo = -1};
+	struct IndexMetaInfo metaInfo = {.attrByteOffset = attrByteOffset, .attrType = attrType, .rootPageNo = rootPageId};
 	strcpy(metaInfo.relationName, tempName);
 	
 	// write meta info to index file
@@ -163,7 +163,7 @@ const PageId BTreeIndex::findPageNoInNonLeaf(Page* node, const void* key) {
 			}
 		}
 
-		return temp->pageNoArray[i + 1];
+		return temp->pageNoArray[i];
 		
 	} else if(this->attributeType == DOUBLE) {
 		struct NonLeafNodeDouble* temp = (NonLeafNodeDouble*)(node);
@@ -179,7 +179,7 @@ const PageId BTreeIndex::findPageNoInNonLeaf(Page* node, const void* key) {
 			}
 		}
 
-		return temp->pageNoArray[i + 1];
+		return temp->pageNoArray[i];
 	} else {
 		struct NonLeafNodeString* temp = (NonLeafNodeString*)(node);
 		std::string strKey((char*)key);
@@ -196,7 +196,7 @@ const PageId BTreeIndex::findPageNoInNonLeaf(Page* node, const void* key) {
 			}
 		}
 
-		return temp->pageNoArray[i + 1];
+		return temp->pageNoArray[i];
 	}
 }
 
@@ -472,7 +472,7 @@ const std::pair<std::pair<PageId, PageId>, void*> BTreeIndex::insertRecursive(Pa
 			if(currNode->keyArrLength < this->leafOccupancy) {
 				insertIntKeyToLeaf(currNode, key, rid);
 				this->bufMgr->unPinPage(this->file, root, true);
-				return std::pair<std::pair<PageId, PageId>, void*>(std::pair<PageId, PageId>(root, -1), NULL);
+				return std::pair<std::pair<PageId, PageId>, void*>(std::pair<PageId, PageId>(root, 0), NULL);
 			} else {
 				// split
 				std::pair<PageId, int*> res = splitLeafNodeInt(currNode, (int*)key, rid);
@@ -493,15 +493,15 @@ const std::pair<std::pair<PageId, PageId>, void*> BTreeIndex::insertRecursive(Pa
 			currNode = (NonLeafNodeInt*)node; 
 
 			// return from recursive call, propagate up
-			if(insertRes.first.second > -1) {
+			if(insertRes.second != NULL) {
 				if(currNode->keyArrLength < this->nodeOccupancy) {
 					insertIntKeyToNonLeaf(currNode,(int*)insertRes.second, 
 					                      insertRes.first.second);
 					this->bufMgr->unPinPage(this->file, root, true);
-					return std::pair<std::pair<PageId, PageId>, void*>(std::pair<PageId, PageId>(root, -1), NULL);
+					return std::pair<std::pair<PageId, PageId>, void*>(std::pair<PageId, PageId>(root, 0), NULL);
 				} else {
 					std::pair<PageId, int*> res = splitNonLeafNodeInt(currNode, insertRes.first.first, 
-					                                                  insertRes.first.second, (int*)res.second);
+					                                                  insertRes.first.second, (int*)insertRes.second);
 					this->bufMgr->unPinPage(this->file, root, true);
 					return std::pair<std::pair<PageId, PageId>, void*>(std::pair<PageId, PageId>(root, res.first), 
 																      (void*)res.second);
@@ -554,6 +554,8 @@ const std::pair<std::pair<PageId, PageId>, void*> BTreeIndex::insertRecursive(Pa
 const void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
 	Page* rootPage;
 	this->bufMgr->readPage(this->file, this->rootPageNum, rootPage);
+	Page* leafPage;
+	PageId leafPageId;
 
 	if(this->attributeType == INTEGER) {
 		struct NonLeafNodeInt* rootNode = (NonLeafNodeInt*) rootPage;
@@ -561,10 +563,8 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
 			rootNode->keyArray[0] = *((int*)key);
 			
 			// allocate leaf
-			Page* leafPage;
-			PageId leafPageId;
 			this->bufMgr->allocPage(this->file, leafPageId, leafPage);
-			struct LeafNodeInt* leafNode = (LeafNodeInt*)leafPage;
+			rootNode->pageNoArray[1] = leafPageId;
 		}
 	} else if(this->attributeType == DOUBLE) {
 		struct NonLeafNodeDouble* rootNode = (NonLeafNodeDouble*) rootPage;
@@ -572,10 +572,8 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
 			rootNode->keyArray[0] = *((double*)key);
 			
 			// allocate leaf
-			Page* leafPage;
-			PageId leafPageId;
 			this->bufMgr->allocPage(this->file, leafPageId, leafPage);
-			struct LeafNodeDouble* leafNode = (LeafNodeDouble*)leafPage;
+			rootNode->pageNoArray[1] = leafPageId;
 		}
 
 	} else {
@@ -584,10 +582,8 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
 			strcpy(rootNode->keyArray[0], (char*)key);
 			
 			// allocate leaf
-			Page* leafPage;
-			PageId leafPageId;
 			this->bufMgr->allocPage(this->file, leafPageId, leafPage);
-			struct LeafNodeString* leafNode = (LeafNodeString*)leafPage;
+			rootNode->pageNoArray[1] = leafPageId;
 		}
 	}
 
@@ -595,7 +591,7 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
 	std::pair<std::pair<PageId, PageId>, void*> res = insertRecursive(this->rootPageNum, key, rid, 0);
 	
 	// root is split
-	if(res.first.second != -1) {
+	if(res.second != NULL) {
 		Page* newRootPage;
 		PageId newRootPageId;
 		this->bufMgr->allocPage(this->file, newRootPageId, newRootPage);

@@ -453,7 +453,7 @@ class BTreeIndex {
 
   const std::pair<PageId, int*> splitLeafNodeInt(struct LeafNodeInt* node, int* key, const RecordId rid);
 
-  const std::pair<PageId, int*> BTreeIndex::splitNonLeafNodeInt(struct NonLeafNodeInt* node, PageId left, PageId right, int* key);
+  const std::pair<PageId, int*> splitNonLeafNodeInt(struct NonLeafNodeInt* node, PageId left, PageId right, int* key);
   /**
 	 * Insert a new entry using the pair <value,rid>. 
 	 * Start from root to recursively find out the leaf to insert the entry in. The insertion may cause splitting of leaf node.
