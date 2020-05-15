@@ -51,7 +51,7 @@ const  int STRINGSIZE = 10;
  * @brief Number of key slots in B+Tree leaf for INTEGER key.
  */
 //                                                  sibling ptr             key               rid
-const  int INTARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( RecordId ) );
+const  int INTARRAYLEAFSIZE = 4;//( Page::SIZE - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( RecordId ) );
 
 /**
  * @brief Number of key slots in B+Tree leaf for DOUBLE key.
@@ -69,7 +69,7 @@ const  int STRINGARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) ) / ( 10 * size
  * @brief Number of key slots in B+Tree non-leaf for INTEGER key.
  */
 //                                                     level     extra pageNo                  key       pageNo
-const  int INTARRAYNONLEAFSIZE = ( Page::SIZE - sizeof( int ) - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( PageId ) );
+const  int INTARRAYNONLEAFSIZE = 4;//( Page::SIZE - sizeof( int ) - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( PageId ) );
 
 /**
  * @brief Number of key slots in B+Tree leaf for DOUBLE key.
@@ -313,7 +313,7 @@ struct LeafNodeString{
 */
 class BTreeIndex {
 
- private:
+ public:
 
   /**
    * File object for the index file.

@@ -18,6 +18,7 @@ export PATH
 all: $(LIB)/bufmgr.a $(OBJ)/filescan.o $(OBJ)/main.o $(OBJ)/btree.o
 	cd src;\
 	rm -r ../relA*;\
+	rm -r ../relB*;\
 	$(CC) $(CFLAGS) -I. obj/filescan.o obj/main.o obj/btree.o lib/bufmgr.a lib/exceptions.a -o badgerdb_main
 
 $(LIB)/bufmgr.a: $(LIB)/exceptions.a src/buffer.* src/file.* src/page.* src/bufHashTbl.*
