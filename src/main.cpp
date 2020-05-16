@@ -231,49 +231,23 @@ void test4() {
 	NonLeafNodeInt* rootNode = (NonLeafNodeInt*)rootPage;
 	printf("rootNode %d %d\n", rootNode->keyArray[0], rootNode->keyArrLength);
 	for(int i = 0; i < 4; i ++) {
-		printf("%d\n", rootNode->keyArray[i]);
+		printf("%d ", rootNode->keyArray[i]);
 	}
 
 	printf("\n");
 	
-	Page* leafPage;
-	PageId leafPageId = rootNode->pageNoArray[1];
-	index.bufMgr->readPage(index.file, leafPageId, leafPage);
-	LeafNodeInt* leafNode = (LeafNodeInt*)leafPage;
-	for(int i = 0; i < 4; i ++) {
-		printf("%d\n", leafNode->keyArray[i]);
+	for(int i = 0; i < 5; i ++) {
+		Page* leafPage;
+		PageId leafPageId = rootNode->pageNoArray[i];
+		index.bufMgr->readPage(index.file, leafPageId, leafPage);
+		LeafNodeInt* leafNode = (LeafNodeInt*)leafPage;
+		for(int j = 0; j < 4; j ++) {
+			printf("%d ", leafNode->keyArray[j]);
+		}
+		printf("\n");
 	}
 
 	printf("\n");
-
-	Page* leafPage3;
-	PageId leafPageId3 = rootNode->pageNoArray[2];
-	index.bufMgr->readPage(index.file, leafPageId3, leafPage3);
-	LeafNodeInt* leafNode3 = (LeafNodeInt*)leafPage3;
-	for(int i = 0; i < 4; i ++) {
-		printf("%d\n", leafNode3->keyArray[i]);
-	}
-
-	printf("\n");
-
-	Page* leafPage4;
-	PageId leafPageId4 = leafNode3->rightSibPageNo;
-	index.bufMgr->readPage(index.file, leafPageId4, leafPage4);
-	LeafNodeInt* leafNode4 = (LeafNodeInt*)leafPage4;
-	for(int i = 0; i < 4; i ++) {
-		printf("%d\n", leafNode4->keyArray[i]);
-	}
-
-	printf("\n");
-	
-	Page* leafPage2;
-	PageId leafPageId2 = rootNode->pageNoArray[0];
-	index.bufMgr->readPage(index.file, leafPageId2, leafPage2);
-	LeafNodeInt* leafNode2 = (LeafNodeInt*)leafPage2;
-	for(int i = 0; i < 4; i ++) {
-		printf("%d\n", leafNode2->keyArray[i]);
-	}
-	
 }
 
 void createSmallRelation()
@@ -296,7 +270,7 @@ void createSmallRelation()
   Page new_page = file2->allocatePage(new_page_number);
 
   // Insert a bunch of tuples into the relation.
-  for(int i = 1; i < 8; i++ )
+  for(int i = 1; i < 10; i++ )
 	{
     sprintf(record1.s, "%05d string record", i);
     record1.i = i;

@@ -359,6 +359,8 @@ const std::pair<PageId, int*> BTreeIndex::splitLeafNodeInt(struct LeafNodeInt* n
 	Page* newNodePage;
 	PageId newNodePageId;
 	this->bufMgr->allocPage(this->file, newNodePageId, newNodePage);
+	std::cout << "page number: " << newNodePageId << std::endl;
+	bufMgr->printSelf();
 
 	struct LeafNodeInt* newNode = (LeafNodeInt*) newNodePage;
 	memset(newNode->keyArray, 0, sizeof(newNode->keyArray));
@@ -393,15 +395,20 @@ const std::pair<PageId, int*> BTreeIndex::splitLeafNodeInt(struct LeafNodeInt* n
 		tempKey[this->leafOccupancy] = node->keyArray[this->leafOccupancy - 1];
 	}
 	
-
+	// modify left/right node
 	for(int i = 0; i < this->leafOccupancy - leftCnt + 1; i ++) {
 		newNode->keyArray[i] = tempKey[i + leftCnt];
 		newNode->ridArray[i] = map[tempKey[i + leftCnt]];
 	}
+
+	for(int i = 0; i < leftCnt; i ++) {
+		node->keyArray[i] = tempKey[i];
+		node->ridArray[i] = map[tempKey[i]];
+	}
  
 	// clear left node
 	memset(node->keyArray + leftCnt, 0, (this->leafOccupancy - leftCnt) * sizeof(int));
-	memset(node->ridArray + leftCnt, 0, (this->leafOccupancy - leftCnt) * sizeof(int));
+	memset(node->ridArray + leftCnt, 0, (this->leafOccupancy - leftCnt) * sizeof(struct RecordId));
 	node->keyArrLength = leftCnt;
 	newNode->keyArrLength = this->leafOccupancy - leftCnt + 1;
 
@@ -421,8 +428,10 @@ const std::pair<PageId, int*> BTreeIndex::splitLeafNodeInt(struct LeafNodeInt* n
 
 const std::pair<PageId, int*> BTreeIndex::splitNonLeafNodeInt(struct NonLeafNodeInt* node, PageId left, PageId right, int* key) {
 	// allocate a new leaf
+	printf("split non leaf\n");
 	Page* newNodePage;
 	PageId newNodePageId;
+	bufMgr->printSelf();
 	this->bufMgr->allocPage(this->file, newNodePageId, newNodePage);
 
 	struct NonLeafNodeInt* newNode = (NonLeafNodeInt*) newNodePage;
@@ -462,17 +471,24 @@ const std::pair<PageId, int*> BTreeIndex::splitNonLeafNodeInt(struct NonLeafNode
 		newNode->keyArray[i] = tempKey[i + leftCnt + 1];
 	}
 
-	for(int i = 0; i < leftCnt + 1; i ++) {
-		newNode->pageNoArray[i] = map[tempKey[i + leftCnt + 1]];
+	for(int i = 0; i < this->nodeOccupancy - leftCnt + 1; i ++) {
+		newNode->pageNoArray[i] = map[tempKey[i + leftCnt]];
+	}
+
+	for(int i = 0; i < leftCnt; i ++) {
+		node->keyArray[i] = tempKey[i];
+	}
+
+	for(int i = 1; i < leftCnt + 1; i ++) {
+		node->pageNoArray[i] = map[tempKey[i - 1]];
 	}
 
 	// clear left node
 	memset(node->keyArray + leftCnt, 0, (this->nodeOccupancy - leftCnt) * sizeof(int));
-	memset(node->pageNoArray + leftCnt + 1, 0, (this->nodeOccupancy - leftCnt) * sizeof(int));
+	memset(node->pageNoArray + leftCnt + 1, 0, (this->nodeOccupancy - leftCnt) * sizeof(PageId));
 	node->keyArrLength = leftCnt;
 	newNode->keyArrLength = this->nodeOccupancy - leftCnt;
 	int* ret_key = &newNode->keyArray[0];
-	printf("%d\n", newNode->keyArray[0]);
 	this->bufMgr->unPinPage(this->file, newNodePageId, true);
 	return std::pair<PageId, int*>(newNodePageId, ret_key);
 }
@@ -486,6 +502,7 @@ const std::pair<std::pair<PageId, PageId>, void*> BTreeIndex::insertRecursive(Pa
 	// check if current node is leaf or not
 	Page* node;
 	this->bufMgr->readPage(this->file, root, node);
+	printf("current key: %d\n", *(int*)key);
 
 	if(this->attributeType == INTEGER) {
 		if(lastLevel == 1) {
@@ -496,7 +513,6 @@ const std::pair<std::pair<PageId, PageId>, void*> BTreeIndex::insertRecursive(Pa
 			if(currNode->keyArrLength < this->leafOccupancy) {
 				insertIntKeyToLeaf(currNode, key, rid);
 				this->bufMgr->unPinPage(this->file, root, true);
-				//printf("hehe9\n");
 				return std::pair<std::pair<PageId, PageId>, void*>(std::pair<PageId, PageId>(root, 0), NULL);
 			} else {
 				// split
@@ -511,10 +527,8 @@ const std::pair<std::pair<PageId, PageId>, void*> BTreeIndex::insertRecursive(Pa
 			struct NonLeafNodeInt* currNode = (NonLeafNodeInt*)node;
 			int cur_level = currNode->level;
 			this->bufMgr->unPinPage(this->file, root, false);
-			//printf("hehe10\n");
 			std::pair<std::pair<PageId, PageId>, void*> insertRes = insertRecursive(nextNodeId, key, rid, cur_level);
-			//printf("hehe11 %d\n", (int*)insertRes.second);
-
+			
 			// read page
 			this->bufMgr->readPage(this->file, root, node);
 			currNode = (NonLeafNodeInt*)node; 
@@ -526,7 +540,7 @@ const std::pair<std::pair<PageId, PageId>, void*> BTreeIndex::insertRecursive(Pa
 					                      insertRes.first.second);
 					this->bufMgr->unPinPage(this->file, root, true);
 					return std::pair<std::pair<PageId, PageId>, void*>(std::pair<PageId, PageId>(root, 0), NULL);
-				} else {
+				} else { 
 					std::pair<PageId, int*> res = splitNonLeafNodeInt(currNode, insertRes.first.first, 
 					                                                  insertRes.first.second, (int*)insertRes.second);
 																	  
