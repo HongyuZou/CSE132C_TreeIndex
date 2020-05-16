@@ -164,7 +164,7 @@ class File {
    */
 	PageId getFirstPageNo();
 
- protected:
+ public:
   /**
    * Returns the position of the page with the given number in the file (as an
    * offset from the beginning of the file).
@@ -341,7 +341,7 @@ class PageFile : public File {
    */
   FileIterator end();
 
- private:
+ public:
 
   /**
    * Reads a page from the file.  If <allow_free> is not set, an exception

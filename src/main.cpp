@@ -236,13 +236,25 @@ void test4() {
 
 	printf("\n");
 	
-	for(int i = 0; i < 5; i ++) {
-		Page* leafPage;
-		PageId leafPageId = rootNode->pageNoArray[i];
-		index.bufMgr->readPage(index.file, leafPageId, leafPage);
-		LeafNodeInt* leafNode = (LeafNodeInt*)leafPage;
+	for(int i = 0; i < 2; i ++) {
+		Page* NonleafPage;
+		PageId NonleafPageId = rootNode->pageNoArray[i];
+		index.bufMgr->readPage(index.file, NonleafPageId, NonleafPage);
+		NonLeafNodeInt* NonleafNode = (NonLeafNodeInt*)NonleafPage;
 		for(int j = 0; j < 4; j ++) {
-			printf("%d ", leafNode->keyArray[j]);
+			printf("%d ", NonleafNode->keyArray[j]);
+		}
+		printf("\n");
+		for(int j = 0; j < 3; j ++) {
+			Page* leafPage;
+			PageId leafPageId = NonleafNode->pageNoArray[j];
+			index.bufMgr->readPage(index.file, leafPageId, leafPage);
+			LeafNodeInt* leafNode = (LeafNodeInt*)leafPage;
+
+			for(int k = 0; k < 4; k ++) {
+				printf("%d ", leafNode->keyArray[k]);
+			}
+			printf("\n");
 		}
 		printf("\n");
 	}

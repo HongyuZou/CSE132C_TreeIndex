@@ -359,8 +359,6 @@ const std::pair<PageId, int*> BTreeIndex::splitLeafNodeInt(struct LeafNodeInt* n
 	Page* newNodePage;
 	PageId newNodePageId;
 	this->bufMgr->allocPage(this->file, newNodePageId, newNodePage);
-	std::cout << "page number: " << newNodePageId << std::endl;
-	bufMgr->printSelf();
 
 	struct LeafNodeInt* newNode = (LeafNodeInt*) newNodePage;
 	memset(newNode->keyArray, 0, sizeof(newNode->keyArray));
@@ -431,7 +429,7 @@ const std::pair<PageId, int*> BTreeIndex::splitNonLeafNodeInt(struct NonLeafNode
 	printf("split non leaf\n");
 	Page* newNodePage;
 	PageId newNodePageId;
-	bufMgr->printSelf();
+	//bufMgr->printSelf();
 	this->bufMgr->allocPage(this->file, newNodePageId, newNodePage);
 
 	struct NonLeafNodeInt* newNode = (NonLeafNodeInt*) newNodePage;
@@ -488,7 +486,23 @@ const std::pair<PageId, int*> BTreeIndex::splitNonLeafNodeInt(struct NonLeafNode
 	memset(node->pageNoArray + leftCnt + 1, 0, (this->nodeOccupancy - leftCnt) * sizeof(PageId));
 	node->keyArrLength = leftCnt;
 	newNode->keyArrLength = this->nodeOccupancy - leftCnt;
-	int* ret_key = &newNode->keyArray[0];
+	int* ret_key = (int*)calloc(1, sizeof(int));
+	*ret_key = tempKey[leftCnt];
+
+	for(int i = 0; i < 5; i ++) {
+		printf("%d ", node->keyArray[i]);
+	}
+	printf("\n");
+	for(int i = 0; i < 5; i ++) {
+		printf("%d ", newNode->keyArray[i]);
+	}
+	printf("\n");
+	for(int i = 0; i < 5; i ++) {
+		printf("%d ", tempKey[i]);
+	}
+
+	printf("\n");
+	printf("ret_ket: %d\n", *ret_key);
 	this->bufMgr->unPinPage(this->file, newNodePageId, true);
 	return std::pair<PageId, int*>(newNodePageId, ret_key);
 }
@@ -538,6 +552,7 @@ const std::pair<std::pair<PageId, PageId>, void*> BTreeIndex::insertRecursive(Pa
 				if(currNode->keyArrLength < this->nodeOccupancy) {
 					insertIntKeyToNonLeaf(currNode,(int*)insertRes.second, 
 					                      insertRes.first.second);
+					//free((int*)insertRes.second);
 					this->bufMgr->unPinPage(this->file, root, true);
 					return std::pair<std::pair<PageId, PageId>, void*>(std::pair<PageId, PageId>(root, 0), NULL);
 				} else { 
@@ -600,17 +615,22 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
 	this->bufMgr->readPage(this->file, this->rootPageNum, rootPage);
 	Page* leafPage;
 	PageId leafPageId;
+	Page* leafPageLeft;
+	PageId leafPageLeftId;
 
 	if(this->attributeType == INTEGER) {
 		struct NonLeafNodeInt* rootNode = (NonLeafNodeInt*) rootPage;
 		if(rootNode->keyArrLength == 0) {
 			rootNode->keyArray[0] = *((int*)key);
 			
-			// allocate leaf
+			// allocate right leaf
 			this->bufMgr->allocPage(this->file, leafPageId, leafPage);
 			rootNode->pageNoArray[1] = leafPageId;
 			rootNode->keyArrLength ++;
-			//printf("leaf page id1 %d\n", leafPageId);
+
+			// allocate left leaf
+			this->bufMgr->allocPage(this->file, leafPageLeftId, leafPageLeft);
+			rootNode->pageNoArray[0] = leafPageLeftId;
 		}
 	} else if(this->attributeType == DOUBLE) {
 		struct NonLeafNodeDouble* rootNode = (NonLeafNodeDouble*) rootPage;
@@ -621,6 +641,10 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
 			this->bufMgr->allocPage(this->file, leafPageId, leafPage);
 			rootNode->pageNoArray[1] = leafPageId;
 			rootNode->keyArrLength ++;
+
+			// allocate left leaf
+			this->bufMgr->allocPage(this->file, leafPageLeftId, leafPageLeft);
+			rootNode->pageNoArray[0] = leafPageLeftId;
 		}
 
 	} else {
@@ -632,6 +656,10 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
 			this->bufMgr->allocPage(this->file, leafPageId, leafPage);
 			rootNode->pageNoArray[1] = leafPageId;
 			rootNode->keyArrLength ++;
+
+			// allocate left leaf
+			this->bufMgr->allocPage(this->file, leafPageLeftId, leafPageLeft);
+			rootNode->pageNoArray[0] = leafPageLeftId;
 		}
 	}
 
@@ -649,7 +677,6 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid) {
 		
 		if(this->attributeType == INTEGER) {
 			NonLeafNodeInt* rootNode = (NonLeafNodeInt*)newRootPage;
-			//printf("%d\n", *((int*)res.second));
 			rootNode->keyArray[0] = *((int*)res.second);
 			rootNode->pageNoArray[0] = res.first.first;
 			rootNode->pageNoArray[1] = res.first.second;
