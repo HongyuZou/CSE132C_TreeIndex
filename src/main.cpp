@@ -233,7 +233,7 @@ void test4() {
 	for(int i = 0; i < 4; i ++) {
 		printf("%d ", rootNode->keyArray[i]);
 	}
-
+	printf("lvl: %d", rootNode->level);
 	printf("\n");
 	
 	for(int i = 0; i < 2; i ++) {
@@ -244,6 +244,7 @@ void test4() {
 		for(int j = 0; j < 4; j ++) {
 			printf("%d ", NonleafNode->keyArray[j]);
 		}
+		printf("lvl: %d", NonleafNode->level);
 		printf("\n");
 		for(int j = 0; j < 3; j ++) {
 			Page* leafPage;
@@ -259,7 +260,17 @@ void test4() {
 		printf("\n");
 	}
 
-	printf("\n");
+	printf("start scan\n");
+	int lowVal = -5;
+	int highVal = 9;
+	index.startScan(&lowVal, GT, &highVal, LTE);
+	for(int i = 0; i < 9; i ++) {
+		RecordId rid;
+		index.scanNext(rid);
+		printf("print record id: %d %d\n", rid.page_number, rid.slot_number);
+	}
+	index.endScan();
+	
 }
 
 void createSmallRelation()

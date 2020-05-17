@@ -220,7 +220,6 @@ void BufMgr::allocPage(File* file, PageId &pageNo, Page*& page)
 	//std::cerr << "buffer data size:" << bufPool[frameNo].data.length() << "\n";
   bufPool[frameNo] = file->allocatePage(pageNo);
   page = &bufPool[frameNo];
-  printf("hehe alloc page %d\n", pageNo);
   // set up the entry properly
   bufDescTable[frameNo].Set(file, pageNo);
 

@@ -365,7 +365,6 @@ Page BlobFile::allocatePage(PageId &new_page_number) {
   FileHeader header = readHeader();
 	Page new_page;
 
-  printf("new page number: %d\n", header.num_pages);
 	new_page_number = header.num_pages;
 
 	if (header.first_used_page == Page::INVALID_NUMBER) {
@@ -373,7 +372,6 @@ Page BlobFile::allocatePage(PageId &new_page_number) {
 	}
 
 	++header.num_pages;
-  printf("new page number after: %d\n", header.num_pages);
 	writePage(new_page_number, new_page);
 	writeHeader(header);
 
