@@ -70,9 +70,13 @@ void createRelationForward();
 void createRelationBackward();
 void createRelationRandom();
 void createSmallRelation();
+void createRelationSparse();
 void intTests();
+void intTestsSparse();
+void intTestsReopen();
 int intScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Operator highOp);
 void indexTests();
+void indexTestsSparse();
 void doubleTests();
 int doubleScan(BTreeIndex *index, double lowVal, Operator lowOp, double highVal, Operator highOp);
 void stringTests();
@@ -81,6 +85,7 @@ void test1();
 void test2();
 void test3();
 void test4();
+void test5();
 void errorTests();
 void deleteRelation();
 
@@ -183,7 +188,8 @@ int main(int argc, char **argv)
 	test1();
 	test2();
 	test3();
-	// errorTests();
+	test5();
+	errorTests();
 
   return 1;
 }
@@ -271,6 +277,65 @@ void test4() {
 	}
 	index.endScan();
 	
+}
+
+void test5()
+{
+	// Create a relation with tuples valued 0 to relationSize in random order and perform index tests 
+	// on attributes of all three types (int, double, string)
+	std::cout << "--------------------" << std::endl;
+	std::cout << "test with sparse numbers" << std::endl;
+	createRelationSparse();
+	indexTestsSparse();
+	deleteRelation();
+}
+
+void test6() {
+
+}
+
+void createRelationSparse() {
+	std::vector<RecordId> ridVec;
+    // destroy any old copies of relation file
+	try
+	{
+		File::remove(relationName);
+	}
+	catch(FileNotFoundException e)
+	{
+	}
+
+  file1 = new PageFile(relationName, true);
+
+  // initialize all of record1.s to keep purify happy
+  memset(record1.s, ' ', sizeof(record1.s));
+	PageId new_page_number;
+  Page new_page = file1->allocatePage(new_page_number);
+
+  // Insert a bunch of tuples into the relation.
+  for(int i = 0; i < 50000; i += 10 )
+	{
+    sprintf(record1.s, "%05d string record", i);
+    record1.i = i;
+    record1.d = (double)i;
+    std::string new_data(reinterpret_cast<char*>(&record1), sizeof(record1));
+
+		while(1)
+		{
+			try
+			{
+    		new_page.insertRecord(new_data);
+				break;
+			}
+			catch(InsufficientSpaceException e)
+			{
+				file1->writePage(new_page_number, new_page);
+  			    new_page = file1->allocatePage(new_page_number);
+			}
+		}
+  }
+
+	file1->writePage(new_page_number, new_page);
 }
 
 void createSmallRelation()
@@ -510,6 +575,45 @@ void createRelationRandom()
 // indexTests
 // -----------------------------------------------------------------------------
 
+void indexTestsSparse()
+{
+  if(testNum == 1)
+  {
+    intTestsSparse();
+	intTestsReopen();
+	
+		try
+		{
+			File::remove(intIndexName);
+		}
+  	catch(FileNotFoundException e)
+  	{
+  	}
+  }
+  else if(testNum == 2)
+  {
+    doubleTests();
+		try
+		{
+			File::remove(doubleIndexName);
+		}
+  	catch(FileNotFoundException e)
+  	{
+  	}
+  }
+  else if(testNum == 3)
+  {
+    stringTests();
+		try
+		{
+			File::remove(stringIndexName);
+		}
+  	catch(FileNotFoundException e)
+  	{
+  	}
+  }
+}
+
 void indexTests()
 {
   if(testNum == 1)
@@ -565,6 +669,59 @@ void intTests()
 	checkPassFail(intScan(&index,0,GT,1,LT), 0)
 	checkPassFail(intScan(&index,300,GT,400,LT), 99) 
 	checkPassFail(intScan(&index,3000,GTE,4000,LT), 1000)
+
+	// run some additional tests
+	checkPassFail(intScan(&index,-1000,GTE,6000,LT), 5000)
+	checkPassFail(intScan(&index,4999,GTE,6000,LT), 1)
+	checkPassFail(intScan(&index,0,GTE,1,LTE), 2)
+	checkPassFail(intScan(&index,0,GTE,4999,LT), 4999)
+	checkPassFail(intScan(&index,3000,GTE,6000,LT), 2000)
+}
+
+void intTestsSparse()
+{
+  std::cout << "Create a B+ Tree index on the integer field" << std::endl;
+  BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple,i), INTEGER);
+  
+	// run some tests
+	checkPassFail(intScan(&index,25,GT,40,LT), 1)
+	checkPassFail(intScan(&index,20,GTE,35,LTE), 2)
+	checkPassFail(intScan(&index,-3,GT,3,LT), 1)
+	checkPassFail(intScan(&index,996,GT,1001,LT), 1)
+	checkPassFail(intScan(&index,0,GT,1,LT), 0)
+	checkPassFail(intScan(&index,300,GT,400,LT), 9) 
+	checkPassFail(intScan(&index,3000,GTE,4000,LT), 100)
+
+	// run some additional tests
+	checkPassFail(intScan(&index,-1000,GTE,6000,LT), 600)
+	checkPassFail(intScan(&index,4999,GTE,6000,LT), 100)
+	checkPassFail(intScan(&index,0,GTE,1,LTE), 1)
+	checkPassFail(intScan(&index,0,GTE,4999,LT), 500)
+	checkPassFail(intScan(&index,3000,GTE,6000,LT), 300)
+}
+
+void intTestsReopen()
+{
+  std::cout << "reopen existing index " << intIndexName << std::endl;
+//   deleteRelation();
+//   PageFile new_file = PageFile::create(relationName);
+  BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple,i), INTEGER);
+  
+	// run some tests
+	checkPassFail(intScan(&index,25,GT,40,LT), 1)
+	checkPassFail(intScan(&index,20,GTE,35,LTE), 2)
+	checkPassFail(intScan(&index,-3,GT,3,LT), 1)
+	checkPassFail(intScan(&index,996,GT,1001,LT), 1)
+	checkPassFail(intScan(&index,0,GT,1,LT), 0)
+	checkPassFail(intScan(&index,300,GT,400,LT), 9) 
+	checkPassFail(intScan(&index,3000,GTE,4000,LT), 100)
+
+	// run some additional tests
+	checkPassFail(intScan(&index,-1000,GTE,6000,LT), 600)
+	checkPassFail(intScan(&index,4999,GTE,6000,LT), 100)
+	checkPassFail(intScan(&index,0,GTE,1,LTE), 1)
+	checkPassFail(intScan(&index,0,GTE,4999,LT), 500)
+	checkPassFail(intScan(&index,3000,GTE,6000,LT), 300)
 }
 
 int intScan(BTreeIndex * index, int lowVal, Operator lowOp, int highVal, Operator highOp)
@@ -613,8 +770,8 @@ int intScan(BTreeIndex * index, int lowVal, Operator lowOp, int highVal, Operato
 		{
 			break;
 		}
-
 		numResults++;
+		//printf("numRes: %d\n", numResults);
 	}
 
   if( numResults >= 5 )

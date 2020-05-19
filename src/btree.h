@@ -363,6 +363,7 @@ class BTreeIndex {
    */
 	bool		scanExecuting;
 
+
   /**
    * Index of next entry to be scanned in current leaf being scanned.
    */
