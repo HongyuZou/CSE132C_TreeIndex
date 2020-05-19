@@ -179,11 +179,11 @@ int main(int argc, char **argv)
 		
 	}
 	
-	test4();
-	// test1();
-	// test2();
-	// test3();
-	//errorTests();
+	//test4();
+	test1();
+	test2();
+	test3();
+	// errorTests();
 
   return 1;
 }
@@ -263,7 +263,7 @@ void test4() {
 	printf("start scan\n");
 	int lowVal = -5;
 	int highVal = 9;
-	index.startScan(&lowVal, GT, &highVal, LTE);
+	index.startScan(&lowVal, GTE, &highVal, LT);
 	for(int i = 0; i < 9; i ++) {
 		RecordId rid;
 		index.scanNext(rid);
@@ -479,6 +479,8 @@ void createRelationRandom()
     record1.i = val;
     record1.d = val;
 
+	//printf("record val: %d\n", record1.i);
+
     std::string new_data(reinterpret_cast<char*>(&record1), sizeof(RECORD));
 
 		while(1)
@@ -513,6 +515,7 @@ void indexTests()
   if(testNum == 1)
   {
     intTests();
+	
 		try
 		{
 			File::remove(intIndexName);
@@ -560,7 +563,7 @@ void intTests()
 	checkPassFail(intScan(&index,-3,GT,3,LT), 3)
 	checkPassFail(intScan(&index,996,GT,1001,LT), 4)
 	checkPassFail(intScan(&index,0,GT,1,LT), 0)
-	checkPassFail(intScan(&index,300,GT,400,LT), 99)
+	checkPassFail(intScan(&index,300,GT,400,LT), 99) 
 	checkPassFail(intScan(&index,3000,GTE,4000,LT), 1000)
 }
 
@@ -621,7 +624,7 @@ int intScan(BTreeIndex * index, int lowVal, Operator lowOp, int highVal, Operato
   index->endScan();
   std::cout << std::endl;
 
-	return numResults;
+  return numResults;
 }
 
 // -----------------------------------------------------------------------------

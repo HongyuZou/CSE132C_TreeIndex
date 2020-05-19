@@ -193,6 +193,19 @@ void BufMgr::flushFile(const File* file)
   }
 }
 
+void BufMgr::cleanUpPinnedPage(File* file) 
+{
+  for (std::uint32_t i = 0; i < numBufs; i++) {
+  	BufDesc* tmpbuf = &(bufDescTable[i]);
+  	if(tmpbuf->valid == true && tmpbuf->file == file) {
+	    if (tmpbuf->pinCnt > 0) {
+        tmpbuf->pinCnt = 1;
+        this->unPinPage(file, tmpbuf->pageNo, true);
+      }
+    }
+  }
+}
+
 void BufMgr::disposePage(File* file, const PageId pageNo) 
 {
 	//Deallocate from file altogether

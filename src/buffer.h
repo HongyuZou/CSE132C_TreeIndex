@@ -275,6 +275,8 @@ class BufMgr
 	 */
   void  printSelf();
 
+  void cleanUpPinnedPage(File* file); 
+
 	/**
    * Get buffer pool usage statistics
 	 */
