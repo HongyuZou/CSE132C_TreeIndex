@@ -392,7 +392,7 @@ class BTreeIndex {
   /**
    * Low STRING value for scan.
    */
-	std::string	lowValString;
+	char	lowValString[10];
 
   /**
    * High INTEGER value for scan.
@@ -407,7 +407,7 @@ class BTreeIndex {
   /**
    * High STRING value for scan.
    */
-	std::string highValString;
+	char highValString[10];
 	
   /**
    * Low Operator. Can only be GT(>) or GTE(>=).
@@ -454,9 +454,12 @@ class BTreeIndex {
 
   const std::pair<PageId, int*> splitLeafNodeInt(struct LeafNodeInt* node, int* key, const RecordId rid);
   const std::pair<PageId, double*> splitLeafNodeDouble(struct LeafNodeDouble* node, double* key, const RecordId rid);
-
+  const std::pair<PageId, char*> splitLeafNodeString(struct LeafNodeString* node, char* key, const RecordId rid);
+  
   const std::pair<PageId, int*> splitNonLeafNodeInt(struct NonLeafNodeInt* node, PageId left, PageId right, int* key);
   const std::pair<PageId, double*> splitNonLeafNodeDouble(struct NonLeafNodeDouble* node, PageId left, PageId right, double* key);
+  const std::pair<PageId, char*> splitNonLeafNodeString(struct NonLeafNodeString* node, PageId left, PageId right, char* key);
+
   /**
 	 * Insert a new entry using the pair <value,rid>. 
 	 * Start from root to recursively find out the leaf to insert the entry in. The insertion may cause splitting of leaf node.
@@ -504,5 +507,6 @@ class BTreeIndex {
 	const void endScan();
 	
 };
+
 
 }

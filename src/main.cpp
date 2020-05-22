@@ -200,6 +200,7 @@ void test1()
 	// on attributes of all three types (int, double, string)
 	std::cout << "---------------------" << std::endl;
 	std::cout << "createRelationForward" << std::endl;
+
 	createRelationForward();
 	indexTests();
 	deleteRelation();
@@ -434,6 +435,7 @@ void createRelationForward()
   for(int i = 0; i < relationSize; i++ )
 	{
     sprintf(record1.s, "%05d string record", i);
+	printf("record: %.10s\n", record1.s);
     record1.i = i;
     record1.d = (double)i;
     std::string new_data(reinterpret_cast<char*>(&record1), sizeof(record1));
@@ -915,6 +917,7 @@ int stringScan(BTreeIndex * index, int lowVal, Operator lowOp, int highVal, Oper
 		try
 		{
 			index->scanNext(scanRid);
+			//printf("hehe: %d %d\n", scanRid.page_number, scanRid.slot_number);
 			bufMgr->readPage(file1, scanRid.page_number, curPage);
 			RECORD myRec = *(reinterpret_cast<const RECORD*>(curPage->getRecord(scanRid).data()));
 			bufMgr->unPinPage(file1, scanRid.page_number, false);
