@@ -184,11 +184,21 @@ int main(int argc, char **argv)
 		
 	}
 	
+	/*
+	 *  Test Design: 
+	 *  0. Test building small tree of size 14 to visualize the tree 
+	 *  1. Add additional tests for forward relation/backward relation/random relation to cover edge cases
+	 *  2. Add additional test for testing sparse relation(0, 10, 20 ... 50000)
+	 *  3. Add additional test for testing reopen existing index file
+	 *  4. In order to test non leaf node split/root split, I tweaked the leaf/nonleaf size to 4 and
+	 *     insert 5000 values to force non leaf node to split (get a tree of level 6).
+	 */
+
 	//test4();
 	test1();
 	test2();
 	test3();
-	//test5();
+	test5();
 	errorTests();
 
   return 1;
@@ -803,6 +813,13 @@ void doubleTests()
 	checkPassFail(doubleScan(&index,0,GT,1,LT), 0)
 	checkPassFail(doubleScan(&index,300,GT,400,LT), 99)
 	checkPassFail(doubleScan(&index,3000,GTE,4000,LT), 1000)
+
+	// run some additional tests
+	checkPassFail(doubleScan(&index,-1000,GTE,6000,LT), 5000)
+	checkPassFail(doubleScan(&index,4999,GTE,6000,LT), 1)
+	checkPassFail(doubleScan(&index,0,GTE,1,LTE), 2)
+	checkPassFail(doubleScan(&index,0,GTE,4999,LT), 4999)
+	checkPassFail(doubleScan(&index,3000,GTE,6000,LT), 2000)
 }
 
 int doubleScan(BTreeIndex * index, double lowVal, Operator lowOp, double highVal, Operator highOp)
@@ -882,6 +899,13 @@ void stringTests()
 	checkPassFail(stringScan(&index,0,GT,1,LT), 0)
 	checkPassFail(stringScan(&index,300,GT,400,LT), 99)
 	checkPassFail(stringScan(&index,3000,GTE,4000,LT), 1000)
+
+	// run some additional tests
+	checkPassFail(stringScan(&index,-1000,GTE,6000,LT), 5000)
+	checkPassFail(stringScan(&index,4999,GTE,6000,LT), 1)
+	checkPassFail(stringScan(&index,0,GTE,1,LTE), 2)
+	checkPassFail(stringScan(&index,0,GTE,4999,LT), 4999)
+	checkPassFail(stringScan(&index,3000,GTE,6000,LT), 2000)
 }
 
 int stringScan(BTreeIndex * index, int lowVal, Operator lowOp, int highVal, Operator highOp)
