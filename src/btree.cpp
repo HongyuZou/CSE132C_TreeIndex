@@ -131,7 +131,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 			break;
 		}
 	}
-
+	this->scanExecuting = false;
 	// store outindex name
 	outIndexName = indexName;
 }

@@ -1,0 +1,6 @@
+Name: Hongyu Zou/ Shicheng Fan
+
+1. Please use the whole source folder for testing since I modified some files.
+2. The design document is in the Btree folder, named CSE132CDesignReport_ZouFan.
+3. Tests are added in main.cpp file. There is also a block comment taking about
+   our tests design.

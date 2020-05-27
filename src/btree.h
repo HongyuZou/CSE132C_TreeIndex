@@ -51,37 +51,37 @@ const  int STRINGSIZE = 10;
  * @brief Number of key slots in B+Tree leaf for INTEGER key.
  */
 //                                                  sibling ptr             key               rid
-const  int INTARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( RecordId ) );
+const  int INTARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) - sizeof(int)) / ( sizeof( int ) + sizeof( RecordId ) );
 
 /**
  * @brief Number of key slots in B+Tree leaf for DOUBLE key.
  */
 //                                                     sibling ptr               key               rid
-const  int DOUBLEARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) ) / ( sizeof( double ) + sizeof( RecordId ) );
+const  int DOUBLEARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId )  - sizeof(int)) / ( sizeof( double ) + sizeof( RecordId ) );
 
 /**
  * @brief Number of key slots in B+Tree leaf for STRING key.
  */
 //                                                    sibling ptr           key                      rid
-const  int STRINGARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) ) / ( 10 * sizeof(char) + sizeof( RecordId ) );
+const  int STRINGARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId )  - sizeof(int)) / ( 10 * sizeof(char) + sizeof( RecordId ) );
 
 /**
  * @brief Number of key slots in B+Tree non-leaf for INTEGER key.
  */
 //                                                     level     extra pageNo                  key       pageNo
-const  int INTARRAYNONLEAFSIZE = ( Page::SIZE - sizeof( int ) - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( PageId ) );
+const  int INTARRAYNONLEAFSIZE = ( Page::SIZE - 2*sizeof( int ) - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( PageId ) );
 
 /**
  * @brief Number of key slots in B+Tree leaf for DOUBLE key.
  */
 //                                                        level        extra pageNo                 key            pageNo   -1 due to structure padding
-const  int DOUBLEARRAYNONLEAFSIZE = (( Page::SIZE - sizeof( int ) - sizeof( PageId ) ) / ( sizeof( double ) + sizeof( PageId ) )) - 1;
+const  int DOUBLEARRAYNONLEAFSIZE = (( Page::SIZE - 2*sizeof( int ) - sizeof( PageId ) ) / ( sizeof( double ) + sizeof( PageId ) )) - 1;
 
 /**
  * @brief Number of key slots in B+Tree leaf for STRING key.
  */
 //                                                        level        extra pageNo             key                   pageNo
-const  int STRINGARRAYNONLEAFSIZE = ( Page::SIZE - sizeof( int ) - sizeof( PageId ) ) / ( 10 * sizeof(char) + sizeof( PageId ) );
+const  int STRINGARRAYNONLEAFSIZE = ( Page::SIZE - 2*sizeof( int ) - sizeof( PageId ) ) / ( 10 * sizeof(char) + sizeof( PageId ) );
 
 /**
  * @brief Structure to store a key-rid pair. It is used to pass the pair to functions that 
@@ -182,8 +182,6 @@ struct NonLeafNodeInt{
 
   int keyArrLength;
 
-  int pageArrLength;
-
   /**
    * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
    */
@@ -206,8 +204,6 @@ struct NonLeafNodeDouble{
 
   int keyArrLength;
 
-  int pageArrLength;
-
   /**
    * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
    */
@@ -229,8 +225,6 @@ struct NonLeafNodeString{
 	char keyArray[ STRINGARRAYNONLEAFSIZE ][ STRINGSIZE ];
 
   int keyArrLength;
-
-  int pageArrLength;
 
   /**
    * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.

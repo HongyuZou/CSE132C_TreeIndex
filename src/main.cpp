@@ -78,8 +78,10 @@ int intScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Operator
 void indexTests();
 void indexTestsSparse();
 void doubleTests();
+void doubleTestsSparse();
 int doubleScan(BTreeIndex *index, double lowVal, Operator lowOp, double highVal, Operator highOp);
 void stringTests();
+void stringTestsSparse();
 int stringScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Operator highOp);
 void test1();
 void test2();
@@ -186,10 +188,10 @@ int main(int argc, char **argv)
 	
 	/*
 	 *  Test Design: 
-	 *  0. Test building small tree of size 14 to visualize the tree 
-	 *  1. Add additional tests for forward relation/backward relation/random relation to cover edge cases
-	 *  2. Add additional test for testing sparse relation(0, 10, 20 ... 50000)
-	 *  3. Add additional test for testing reopen existing index file
+	 *  0. Test building small tree of size 14 to visualize the tree (test 4)
+	 *  1. Add additional tests for forward relation/backward relation/random relation to cover edge cases (test 1,2,3)
+	 *  2. Add additional test for testing sparse relation(0, 10, 20 ... 50000) (test 5)
+	 *  3. Add additional test for testing reopen existing index file (test 5)
 	 *  4. In order to test non leaf node split/root split, I tweaked the leaf/nonleaf size to 4 and
 	 *     insert 5000 values to force non leaf node to split (get a tree of level 6).
 	 */
@@ -604,7 +606,7 @@ void indexTestsSparse()
   }
   else if(testNum == 2)
   {
-    doubleTests();
+    doubleTestsSparse();
 		try
 		{
 			File::remove(doubleIndexName);
@@ -615,7 +617,7 @@ void indexTestsSparse()
   }
   else if(testNum == 3)
   {
-    stringTests();
+    stringTestsSparse();
 		try
 		{
 			File::remove(stringIndexName);
@@ -822,6 +824,28 @@ void doubleTests()
 	checkPassFail(doubleScan(&index,3000,GTE,6000,LT), 2000)
 }
 
+void doubleTestsSparse()
+{
+  std::cout << "Create a B+ Tree index on the integer field" << std::endl;
+  BTreeIndex index(relationName, doubleIndexName, bufMgr, offsetof(tuple, d), DOUBLE);
+  
+	// run some tests
+	checkPassFail(doubleScan(&index,25,GT,40,LT), 1)
+	checkPassFail(doubleScan(&index,20,GTE,35,LTE), 2)
+	checkPassFail(doubleScan(&index,-3,GT,3,LT), 1)
+	checkPassFail(doubleScan(&index,996,GT,1001,LT), 1)
+	checkPassFail(doubleScan(&index,0,GT,1,LT), 0)
+	checkPassFail(doubleScan(&index,300,GT,400,LT), 9) 
+	checkPassFail(doubleScan(&index,3000,GTE,4000,LT), 100)
+
+	// run some additional tests
+	checkPassFail(doubleScan(&index,-1000,GTE,6000,LT), 600)
+	checkPassFail(doubleScan(&index,4999,GTE,6000,LT), 100)
+	checkPassFail(doubleScan(&index,0,GTE,1,LTE), 1)
+	checkPassFail(doubleScan(&index,0,GTE,4999,LT), 500)
+	checkPassFail(doubleScan(&index,3000,GTE,6000,LT), 300)
+}
+
 int doubleScan(BTreeIndex * index, double lowVal, Operator lowOp, double highVal, Operator highOp)
 {
   RecordId scanRid;
@@ -906,6 +930,28 @@ void stringTests()
 	checkPassFail(stringScan(&index,0,GTE,1,LTE), 2)
 	checkPassFail(stringScan(&index,0,GTE,4999,LT), 4999)
 	checkPassFail(stringScan(&index,3000,GTE,6000,LT), 2000)
+}
+
+void stringTestsSparse()
+{
+  std::cout << "Create a B+ Tree index on the string field" << std::endl;
+  BTreeIndex index(relationName, stringIndexName, bufMgr, offsetof(tuple, s), STRING);
+  
+	// run some tests
+	checkPassFail(stringScan(&index,25,GT,40,LT), 1)
+	checkPassFail(stringScan(&index,20,GTE,35,LTE), 2)
+	checkPassFail(stringScan(&index,-3,GT,3,LT), 1)
+	checkPassFail(stringScan(&index,996,GT,1001,LT), 1)
+	checkPassFail(stringScan(&index,0,GT,1,LT), 0)
+	checkPassFail(stringScan(&index,300,GT,400,LT), 9) 
+	checkPassFail(stringScan(&index,3000,GTE,4000,LT), 100)
+
+	// run some additional tests
+	checkPassFail(stringScan(&index,-1000,GTE,6000,LT), 600)
+	checkPassFail(stringScan(&index,4999,GTE,6000,LT), 100)
+	checkPassFail(stringScan(&index,0,GTE,1,LTE), 1)
+	checkPassFail(stringScan(&index,0,GTE,4999,LT), 500)
+	checkPassFail(stringScan(&index,3000,GTE,6000,LT), 300)
 }
 
 int stringScan(BTreeIndex * index, int lowVal, Operator lowOp, int highVal, Operator highOp)
